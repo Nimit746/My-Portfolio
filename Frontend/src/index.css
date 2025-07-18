@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+.glass{
+    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-lg;
+}
+
+.grdnt{
+    @apply bg-gradient-to-r from-blue-400 via-cyan-700 to-indigo-800 text-transparent bg-clip-text;
+}
+
+.glassbtn{
+    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-lg;
+}
+
+.gradient{
+    @apply bg-gradient-to-r from-blue-400 via-cyan-700 to-indigo-800;
+}
