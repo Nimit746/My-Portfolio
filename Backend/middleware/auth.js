@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import Admin from '../models/Admin.js';
 
 export async function checkAdminAuth(req, res, next) {
@@ -29,8 +30,10 @@ export async function checkAdminAuth(req, res, next) {
       });
     }
 
-    // Check password
-    if (password === admin.password) {
+    // Check password using bcrypt comparison
+    const isValidPassword = await bcrypt.compare(password, admin.password);
+
+    if (isValidPassword) {
       console.log("checkAdminAuth middleware - Authentication successful");
       next();
     } else {

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import bcrypt from 'bcryptjs';
 import { connectDB } from './db.js';
 import Admin from './models/Admin.js';
 import Project from './models/Project.js';
@@ -18,13 +19,17 @@ app.use(bodyParser.json({ limit: '10mb' }));
 // Connect to MongoDB
 connectDB();
 
-// Ensure single admin document exists with default password
+// Ensure single admin document exists with hashed password
 async function ensureAdminPassword() {
   const adminCount = await Admin.countDocuments();
   if (adminCount === 0) {
-    const defaultAdmin = new Admin({ password: ADMIN_PASSWORD });
+    // Hash the password before storing
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, saltRounds);
+
+    const defaultAdmin = new Admin({ password: hashedPassword });
     await defaultAdmin.save();
-    console.log('Default admin password document created');
+    console.log('Default admin password document created with encrypted password');
   }
 }
 ensureAdminPassword().catch(console.error);
@@ -41,17 +46,18 @@ app.get('/projects', async (req, res) => {
   }
 });
 
-// Admin login - check password from DB
+// Admin login - check password against hashed version in DB
 app.post('/admin/login', async (req, res) => {
   const { password } = req.body;
   try {
     const admin = await Admin.findOne();
-    if (admin && password === admin.password) {
+    if (admin && await bcrypt.compare(password, admin.password)) {
       res.json({ success: true, message: 'Authorized' });
     } else {
       res.status(401).json({ success: false, message: 'Unauthorized' });
     }
   } catch (err) {
+    console.error('Login error:', err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -75,7 +81,7 @@ app.post('/admin/projects', checkAdminAuth, async (req, res) => {
 // Update a project (admin only)
 app.put('/admin/projects/:id', checkAdminAuth, async (req, res) => {
   const { id } = req.params;
-  const { title, description, image, projectUrl, githubLink, tech, isPublic, password } = req.body;
+  const { title, description, image, projectUrl, githubLink, tech, isPublic } = req.body;
   try {
     // Include isPublic in the update
     const updatedProject = await Project.findByIdAndUpdate(
@@ -104,6 +110,32 @@ app.delete('/admin/projects/:id', checkAdminAuth, async (req, res) => {
     res.json({ message: 'Project deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete project' });
+  }
+});
+
+// Optional: Add endpoint to change admin password (admin only)
+app.put('/admin/change-password', checkAdminAuth, async (req, res) => {
+  const { newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters long' });
+  }
+
+  try {
+    const saltRounds = 12;
+    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    const admin = await Admin.findOne();
+    if (admin) {
+      admin.password = hashedNewPassword;
+      await admin.save();
+      res.json({ success: true, message: 'Password changed successfully' });
+    } else {
+      res.status(404).json({ error: 'Admin not found' });
+    }
+  } catch (err) {
+    console.error('Password change error:', err);
+    res.status(500).json({ error: 'Failed to change password' });
   }
 });
 
