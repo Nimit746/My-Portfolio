@@ -17,7 +17,8 @@ const Projects = (props) => {
     authenticate,
     logout,
     isAuthenticated,
-    fetchProjects
+    fetchProjects,
+    authenticatedPassword
   } = useProjects();
 
   const [password, setPassword] = useState("");
@@ -110,37 +111,76 @@ const Projects = (props) => {
     }
   };
 
+
+  // Updated handleDeleteProject function in Projects.jsx
   const handleDeleteProject = async (id) => {
-    if (isLoading) return; // Prevent multiple deletions
+    console.log("handleDeleteProject called with ID:", id);
+
+    if (isLoading) {
+      console.log("handleDeleteProject - Already loading, preventing duplicate request");
+      return;
+    }
+
+    // Validate inputs
+    if (!id) {
+      alert("Error: No project ID provided");
+      return;
+    }
+
+    // Find the project to get its name for confirmation
+    const projectToDelete = projects.find(p => p._id === id);
+    const projectName = projectToDelete ? projectToDelete.title : "this project";
+
+    // Confirm deletion
+    const confirmMessage = `Are you sure you want to delete "${projectName}"?\n\nThis action cannot be undone.`;
+    if (!window.confirm(confirmMessage)) {
+      console.log("handleDeleteProject - User cancelled deletion");
+      return;
+    }
 
     setIsLoading(true);
 
     try {
-      // Ensure we have a password
-      if (!password && !isAuthenticated) {
-        alert("Please login first to delete projects");
-        setIsLoading(false);
-        return;
+      // Ensure we have authentication
+      const passwordToUse = password || (isAuthenticated ? authenticatedPassword : null);
+
+      if (!passwordToUse) {
+        throw new Error("Please login first to delete projects");
       }
 
-      console.log("Deleting project:", id);
-      const success = await deleteProject(id, password);
+      console.log("handleDeleteProject - Attempting to delete project:", {
+        id,
+        projectName,
+        hasPassword: !!passwordToUse
+      });
+
+      const success = await deleteProject(id, passwordToUse);
 
       if (success) {
-        alert("Project deleted successfully");
+        console.log("handleDeleteProject - Project deleted successfully");
+        alert(`"${projectName}" has been deleted successfully`);
+
+        // Refresh the projects list to ensure UI is in sync
         await fetchProjects();
       } else {
-        alert("Failed to delete project. Please check your credentials and try again.");
+        throw new Error("Delete operation returned false");
       }
     } catch (error) {
-      console.error("Error deleting project:", error);
-      const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred";
-      alert(`Error deleting project: ${errorMessage}. Please try again.`);
+      console.error("handleDeleteProject - Error:", error);
+
+      let errorMessage = "Failed to delete project";
+
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      alert(`Error deleting project: ${errorMessage}\n\nPlease try again or check your credentials.`);
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleToggleVisibility = async (projectId) => {
     if (isLoading) return; // Prevent multiple toggles
 
@@ -280,13 +320,8 @@ const Projects = (props) => {
                 <button
                   onClick={async (e) => {
                     e.preventDefault();
-                    if (
-                      window.confirm(
-                        `Are you sure you want to delete "${project.title}"?`
-                      )
-                    ) {
-                      await handleDeleteProject(project._id);
-                    }
+                    e.stopPropagation(); // Prevent event bubbling
+                    await handleDeleteProject(project._id);
                   }}
                   disabled={isLoading}
                   className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"

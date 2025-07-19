@@ -46,7 +46,7 @@ const Footer = (props) => {
         </a>
 
         <a
-          href="https://instagram.com/your-profile"
+          href="https://www.instagram.com/ngupta85_"
           target="_blank"
           rel="noopener noreferrer"
         >

@@ -74,14 +74,14 @@ const NavLinks = ({ props}) => (
     >
       <li>Projects</li>
     </Link>
-    <Link
+    {/* <Link
       to="/contacts"
       className="hover:text-sky-900 transition-all duration-200 hover:scale-110"
       style={{ textDecoration: props.cunder }}
       onClick={props.toggleMenu}
     >
       <li>Contact Me</li>
-    </Link>
+    </Link> */}
   </>
 );
 

@@ -114,14 +114,73 @@ export const ProjectProvider = ({ children }) => {
     }
   };
 
+  // Updated deleteProject function in ProjectContext.jsx
   const deleteProject = async (id, password) => {
     try {
-      await axios.delete(`${API_BASE_URL}/admin/projects/${id}`, { data: { password } });
-      setProjects((prev) => prev.filter((p) => p._id !== id));
+      console.log("Starting deleteProject - ID:", id, "Password provided:", !!password);
+
+      // Validate inputs
+      if (!id) {
+        console.error("deleteProject - No project ID provided");
+        throw new Error("Project ID is required");
+      }
+
+      if (!password) {
+        console.error("deleteProject - No password provided");
+        throw new Error("Password is required for deletion");
+      }
+
+      // Make the delete request
+      const response = await axios.delete(`${API_BASE_URL}/admin/projects/${id}`, {
+        data: { password },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000 // 10 second timeout
+      });
+
+      console.log("deleteProject - Response:", response.data);
+
+      // Update local state immediately
+      setProjects((prev) => {
+        const updatedProjects = prev.filter((p) => p._id !== id);
+        console.log("deleteProject - Updated projects count:", updatedProjects.length);
+        return updatedProjects;
+      });
+
       return true;
     } catch (error) {
-      console.error("Failed to delete project", error);
-      return false;
+      console.error("deleteProject - Error occurred:", error);
+
+      // Handle different types of errors
+      if (error.code === 'ECONNABORTED') {
+        console.error("deleteProject - Request timeout");
+        throw new Error("Request timeout - please try again");
+      } else if (error.response) {
+        // Server responded with error
+        console.error("deleteProject - Server error response:", {
+          status: error.response.status,
+          data: error.response.data,
+          statusText: error.response.statusText
+        });
+
+        if (error.response.status === 401) {
+          throw new Error("Invalid password");
+        } else if (error.response.status === 404) {
+          throw new Error("Project not found");
+        } else if (error.response.status === 403) {
+          throw new Error("Access denied");
+        } else {
+          throw new Error(error.response.data?.message || `Server error: ${error.response.status}`);
+        }
+      } else if (error.request) {
+        // Network error
+        console.error("deleteProject - Network error:", error.request);
+        throw new Error("Network error - please check your connection");
+      } else {
+        // Other error
+        throw new Error(error.message || "Unknown error occurred");
+      }
     }
   };
 

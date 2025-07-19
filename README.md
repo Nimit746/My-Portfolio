@@ -107,3 +107,5 @@ Visit: `http://localhost:3000`
 - 🧠 AI-based project categorization
 - 🎥 Animated transitions with Framer Motion
 
+
+---
