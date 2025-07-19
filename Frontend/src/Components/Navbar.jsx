@@ -33,7 +33,7 @@ const Navbar = (props) => {
 
       {/* Mobile Nav Links */}
       {isMenuOpen && (
-        <ul className="md:hidden flex flex-col gap-2 py-2">
+        <ul className="md:hidden flex flex-col gap-2 py-2 text-white">
           <NavLinks props={props} />
         </ul>
       )}
