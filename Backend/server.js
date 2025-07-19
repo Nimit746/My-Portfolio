@@ -13,7 +13,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD; // Default password if none in DB
 
-app.use(cors());
+app.use(cors({
+  origin: 'https://your-netlify-site.netlify.app',
+  credentials: true
+}));
+
 app.use(bodyParser.json({ limit: '10mb' }));
 
 // Connect to MongoDB
